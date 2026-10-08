@@ -81,6 +81,8 @@ admins can also see and revoke members' grants under **Organization settings**.
 - Deploys, variable changes and runs started from Claude show in your audit log
   as you "via Claude".
 
+The full guide, including every tool, the limits, what is sent to Anthropic
+and the OAuth/MCP protocol details, is [docs/connector.md](docs/connector.md).
 Questions or problems: support@nimbusland.ca.
 
 ## License

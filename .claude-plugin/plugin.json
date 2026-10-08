@@ -1,0 +1,21 @@
+{
+  "name": "nimbus-land",
+  "description": "Deploy, inspect and operate your Nimbus Land apps from Claude: the Nimbus Land connector plus a skill for the nimbus CLI.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Nimbus Land",
+    "email": "support@nimbusland.ca"
+  },
+  "homepage": "https://nimbusland.ca",
+  "repository": "https://github.com/nimbus-land/claude-plugin",
+  "license": "MIT",
+  "keywords": [
+    "nimbus-land",
+    "deploy",
+    "hosting",
+    "paas",
+    "canada",
+    "mcp",
+    "cli"
+  ]
+}

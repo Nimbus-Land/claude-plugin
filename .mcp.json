@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "nimbus": {
+      "type": "http",
+      "url": "https://nimbusland.ca/mcp"
+    }
+  }
+}

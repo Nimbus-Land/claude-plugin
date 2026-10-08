@@ -29,7 +29,8 @@ Check whether the Nimbus Land connector's tools are available (`list_apps`,
 ## Rule 2: never handle credentials
 
 - NEVER print, echo, `cat`, store, paste or commit tokens, passwords or secret
-  values. Do not read `~/.config/nimbus/credentials.json`.
+  values. The CLI keeps its own credential after `nimbus login`; never read it,
+  and never look for a token anywhere else on the user's machine.
 - Do not run `nimbus login --email ... --password ...` and do not ask the user
   for their password or authenticator code. Use the browser login.
 - Never put a token in `.nimbus.yml` (the old `api_token` line is legacy; tell
@@ -48,12 +49,13 @@ nimbus version            # installed? which version, and how it was installed
 If it is missing, offer one of:
 
 ```bash
-brew install nimbus-land/tap/nimbus                    # macOS and Linux
-curl -fsSL https://get.nimbusland.ca/install.sh | sh   # installs to ~/.local/bin, no sudo
+brew install nimbus-land/tap/nimbus    # macOS and Linux (tap: github.com/nimbus-land/homebrew-tap)
 ```
 
-The install script prints a `PATH` line to add if `~/.local/bin` is not on
-`PATH`. Upgrade with `brew update && brew upgrade nimbus`, or re-run the script.
+Without Homebrew, the user downloads the signed release build for their OS
+and CPU from the list at https://get.nimbusland.ca/cli/releases.json, checks
+it against the release's `checksums.txt`, and puts it on their `PATH`. Do not
+run an installer for them. Upgrade with `brew update && brew upgrade nimbus`.
 
 ## Log in
 
@@ -65,8 +67,8 @@ nimbus login              # browser device-code flow, once per machine
 `nimbus login` prints a verification URL and a user code and waits while the
 user approves in the browser. Show the user the URL and code, tell them to
 approve in their browser, and wait for the command to finish. Do not approve on
-their behalf or work around it. The token is stored in the user's config, never
-in the project.
+their behalf or work around it. The CLI keeps the resulting credential
+itself, never in the project.
 
 `not logged in` or `api error (401)` means: run `nimbus login` again (or, in
 CI, check the `NIMBUS_TOKEN` secret).
@@ -149,11 +151,10 @@ AI gateway and cannot be changed here.
 user to run it in their own terminal, reading the value from standard input:
 
 ```bash
-printf %s "$STRIPE_KEY" | nimbus env set STRIPE_KEY=- --secret
-pbpaste | nimbus env set STRIPE_KEY=- --secret     # macOS clipboard
+nimbus env set STRIPE_KEY=- --secret    # the user runs this; `-` reads the value from standard input
 ```
 
-Only one `KEY=-` per command. `--secret` also turns an existing plain variable
+Only one `KEY=-` per command. You never see the value. `--secret` also turns an existing plain variable
 into a secret. With the connector, `set_env` has a secret flag, but the value
 still passes through the conversation: for real credentials, prefer the user's
 shell or the console.
@@ -177,9 +178,7 @@ stores it as a CI secret named `NIMBUS_TOKEN`; you only reference it by name:
 
 ```yaml
 - name: Install the Nimbus CLI
-  run: curl -fsSL https://get.nimbusland.ca/install.sh | sh
-  env:
-    NIMBUS_VERSION: 0.4.0   # optional pin
+  run: brew install nimbus-land/tap/nimbus   # Homebrew is preinstalled on GitHub-hosted runners
 - name: Deploy to Nimbus Land
   env:
     NIMBUS_TOKEN: ${{ secrets.NIMBUS_TOKEN }}

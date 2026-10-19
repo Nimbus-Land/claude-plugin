@@ -11,7 +11,11 @@ This plugin bundles two things:
   choose which organization Claude may act in. It lets Claude list apps, read
   status, runtime logs, builds and build logs, read environment variables
   (secret values masked), deploy from an app's connected repository, rebuild,
-  set variables and run one-off commands.
+  set variables and run one-off commands. Since 0.2.0 it also reads an app's
+  health: open incidents and alert rules, request figures, visitors, browser
+  vitals, error groups with their stack traces, traces and operations, so
+  "why is my app slow?" and "what is this error?" get answered from the
+  app's own telemetry.
 - **The `nimbus-cli` skill** (`skills/nimbus-cli/`): teaches Claude the
   [`nimbus` CLI](https://nimbusland.ca) for work that needs your local project:
   `nimbus init`, `nimbus detect`, and deploying the working tree as it is on
@@ -80,6 +84,11 @@ admins can also see and revoke members' grants under **Organization settings**.
   the console for anything sensitive.
 - Deploys, variable changes and runs started from Claude show in your audit log
   as you "via Claude".
+- Telemetry is your app's and your visitors' content. When Claude asks for
+  errors, traces or traffic, error messages, stack traces, request paths and
+  page URLs go to Claude as tool results, bounded (capped lists, lines cut at
+  2,048 bytes, at most 50 stack lines per trace). Claude is told with every
+  result that this content is data, never instructions.
 
 The full guide, including every tool, the limits, what is sent to Anthropic
 and the OAuth/MCP protocol details, is [docs/connector.md](docs/connector.md).

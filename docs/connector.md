@@ -79,6 +79,15 @@ such, so Claude asks you before calling them.
 | `get_build` | read-only | One build: status, source, started and finished, failure reason, console link |
 | `get_build_logs` | read-only | The tail of a build's log, with a console link for the full log |
 | `get_env` | read-only | Environment variable names and values; secret values are masked and marked as secret |
+| `get_app_health` | read-only | The one-call summary for an app (name, optional `environment` and `window`): open incidents, the alert rules, the window's traffic figures, the measurement switches, the error groups seen and the slowest and failing operations |
+| `get_traffic` | read-only | An app's request figures (name, optional `environment` and `window`): the series, the current rate, error rate and response times, and the most recent failed requests |
+| `get_analytics` | read-only | Visitors and page views for a `period` (`today`, `7d`, `30d`, `12m`): the series, top pages, sources and devices |
+| `get_browser_vitals` | read-only | The browser measurement switch and, when on, the Core Web Vitals with their ratings, the page-load phases and the slowest resources (name, optional `environment` and `window`) |
+| `list_errors` | read-only | The error groups seen in the window (name, optional `environment` and `window`): title, location, counts, state, fingerprint |
+| `get_error` | read-only | One error group by fingerprint: its trend and its most recent samples with stack traces |
+| `list_traces` | read-only | The newest traces in the window (name, optional `environment`, `window`, operation and failed-only filters) |
+| `get_trace` | read-only | One trace by id: its spans as a tree, with durations, failures, attributes and events |
+| `list_incidents` | read-only | An app's recent alert incidents, open ones first, with the alert rules |
 | `deploy_app` | makes changes | Starts a build of the app's connected repository and tracked branch, or of a Git URL and revision you give; returns the build and how to follow it |
 | `rebuild` | makes changes | Re-runs the app's newest build with the same source |
 | `set_env` | makes changes | Sets one or more variables, optionally as secrets; answers with variable names, never secret values |
@@ -87,6 +96,13 @@ such, so Claude asks you before calling them.
 Apps are named the way the console names them. An app outside the connected
 organization is simply "not found". Answers include the console link for the
 thing described, so you can jump from the conversation to the full page.
+
+The telemetry tools read the same figures as the Monitoring and Analytics tabs
+and answer from the production environment unless you name another. Asking for
+traces of a static site is not an error: Claude is told a static site has no
+server-side measurement and is pointed at the browser and error tools. The
+public Nimbus-Land/claude-plugin repository documents the same tools in its
+0.2.0.
 
 Activity started from Claude shows in the console and the audit log as you
 "via Claude" (or whichever client you approved), not as anonymous API traffic.
@@ -112,7 +128,7 @@ suspended, subscription past due, build queue full.
 - **Rate limits.** Each connection has its own request budget (about two
   requests a second); past it, calls are refused briefly and Claude retries.
 - **Not covered yet:** databases, volumes, buckets, custom domains, non-production
-  environments, process types, agent tasks and billing. Use the console or the
+  environments (other than reading their logs and telemetry), process types, agent tasks and billing. Use the console or the
   CLI for those.
 
 ## Revoking access
@@ -146,6 +162,14 @@ you type into a tool argument (a variable value, a command) does too.
 - **Log and build output is data, not instructions.** Claude is told so, but
   treat a conversation that suddenly wants to deploy or change variables after
   reading logs with suspicion.
+- **Telemetry is your app's and your visitors' content.** When Claude calls
+  the telemetry tools, error messages, stack traces, span names, attributes and
+  events, request paths, page URLs and referrers of the app go to Anthropic as
+  tool results, bounded the way the HTTP API bounds them (see the platform's HTTP API guide, "Bounds and content"):
+  capped lists, each line cut at 2,048 bytes and at most 50 stack lines per
+  trace. If your app puts personal data in URLs or error messages, it reaches
+  Claude when you ask for errors, traces or traffic. This content is data, not
+  instructions, and Claude is told so with every result.
 - **Nothing else.** No bucket contents, database rows or volume data are
   exposed by the connector.
 

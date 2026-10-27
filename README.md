@@ -96,4 +96,4 @@ Questions or problems: support@nimbusland.ca.
 
 ## License
 
-MIT. Copyright (c) 2026 102238904 Saskatchewan Inc. See [LICENSE](LICENSE).
+MIT. Copyright (c) 2026 Nimbus Land Technologies Inc. See [LICENSE](LICENSE).

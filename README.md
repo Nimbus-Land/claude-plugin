@@ -4,7 +4,7 @@ Deploy, inspect and operate your [Nimbus Land](https://nimbusland.ca) apps
 without leaving Claude. Ask "is my app up?", "why did the last build fail?" or
 "deploy main", and Claude answers from your actual apps.
 
-This plugin bundles two things:
+This plugin bundles three things:
 
 - **The Nimbus Land connector** (`.mcp.json`): a remote MCP server at
   `https://nimbusland.ca/mcp`. You sign in with your Nimbus Land account and
@@ -15,12 +15,27 @@ This plugin bundles two things:
   health: open incidents and alert rules, request figures, visitors, browser
   vitals, error groups with their stack traces, traces and operations, so
   "why is my app slow?" and "what is this error?" get answered from the
-  app's own telemetry.
-- **The `nimbus-cli` skill** (`skills/nimbus-cli/`): teaches Claude the
-  [`nimbus` CLI](https://nimbusland.ca) for work that needs your local project:
-  `nimbus init`, `nimbus detect`, and deploying the working tree as it is on
-  disk. It tells Claude to prefer the connector when it is connected, and never
-  to print or store your credentials.
+  app's own telemetry. Since 0.3.0 it also deploys: a small app straight
+  from the conversation, or the project on your disk through a one-time
+  upload that Claude runs as one command, with no CLI to install and no
+  second sign-in. Since 0.3.1 a React artifact deploys as it is: Claude
+  passes the one component and Nimbus Land builds the project around it.
+- **Mods for Claude Code** (`hooks/`, since 0.4.0): a card under each deploy
+  call that reads Building, Live or Failed with the app's address and a link
+  to the build; a follow that keeps waiting on a build after the call returned
+  and tells you once when the app is live or the build failed; and `/nimbus`,
+  a pane listing your apps with status, address and open alert incidents. By
+  themselves the mods call only the connector's read-only `wait_for_build`
+  and `list_apps` tools; they make no other network request and keep nothing
+  after the session. They appear in Claude Code (terminal, desktop Code tab,
+  VS Code, mobile), not in a claude.ai chat. Built against Claude Code
+  2.1.323; the mods API is early access, so a Claude Code update can stop the
+  mods from loading, and the connector and skill keep working when it does.
+- **The `nimbus-cli` skill** (`skills/nimbus-cli/`): teaches Claude when to
+  deploy through the connector and when to use the
+  [`nimbus` CLI](https://nimbusland.ca) (no connector, CI, or a project over
+  100 MiB), what a deployable app looks like, and never to print or store your
+  credentials.
 
 ## Install in Claude Code
 

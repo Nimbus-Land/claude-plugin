@@ -1,7 +1,7 @@
 {
   "name": "nimbus-land",
-  "description": "Deploy, inspect and operate your Nimbus Land apps from Claude: the Nimbus Land connector plus a skill for the nimbus CLI.",
-  "version": "0.2.0",
+  "description": "Deploy, inspect and operate your Nimbus Land apps from Claude: the Nimbus Land connector, a skill for the nimbus CLI, and mods that show a deploy as it happens.",
+  "version": "0.4.0",
   "author": {
     "name": "Nimbus Land",
     "email": "support@nimbusland.ca"
@@ -18,5 +18,14 @@
     "canada",
     "mcp",
     "cli"
-  ]
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "connector": {
+      "type": "string",
+      "title": "Connector name",
+      "description": "Only for a control plane other than nimbusland.ca: the name /mcp lists its connector under. Leave empty otherwise.",
+      "default": ""
+    }
+  }
 }

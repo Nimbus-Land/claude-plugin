@@ -13,11 +13,12 @@ for developers are at the [end of this page](#for-developers-the-protocol).
 
 ## Adding the connector
 
-**From the Claude directory.** Once Nimbus Land is listed, find it in the
-directory and select **Connect**. This is the same as the custom connector
-below, without typing the URL.
+**From the Claude directory.** Find Nimbus Land in the directory and select
+**Connect**, then sign in to Nimbus Land in the window that opens. This is the
+usual way, and one connection serves claude.ai, Claude Desktop, mobile and
+Claude Code.
 
-**On claude.ai and Claude Desktop, by URL.** Until then:
+**On claude.ai and Claude Desktop, by URL.** The same connector, added by hand:
 
 1. **Settings → Connectors → Add custom connector**.
 2. Name it `Nimbus Land`, URL `https://nimbusland.ca/mcp`. Leave the OAuth
@@ -34,8 +35,7 @@ claude mcp add --transport http nimbus https://nimbusland.ca/mcp
 Then run `/mcp` in Claude Code and choose **nimbus** to sign in. Your browser
 opens the consent page, and Claude Code receives the result on a `localhost`
 callback. [This plugin](../README.md) adds the same connector plus a skill that
-teaches Claude the `nimbus` CLI, for work that needs your local project (see
-[Limits](#limits)).
+teaches Claude when to use it and when to use the `nimbus` CLI.
 
 ## The consent page
 
@@ -72,22 +72,26 @@ such, so Claude asks you before calling them.
 
 | Tool | | What it does |
 | --- | --- | --- |
-| `list_apps` | read-only | Every app in the organization: status, address, stack, last deploy |
+| `list_apps` | read-only | Every app in the organization: status, address, stack, last deploy, open alert incidents |
 | `get_app` | read-only | One app: status, address, live release, instances, connected repository and branch, custom domain, recent builds, console link |
 | `get_app_logs` | read-only | Recent runtime log lines (at most 200), optionally for one instance (named as the console labels them, e.g. `web-7d9f8`), with a console link for more |
 | `list_builds` | read-only | An app's builds: status, source, times, failure reason |
 | `get_build` | read-only | One build: status, source, started and finished, failure reason, console link |
 | `get_build_logs` | read-only | The tail of a build's log, with a console link for the full log |
 | `get_env` | read-only | Environment variable names and values; secret values are masked and marked as secret |
-| `get_app_health` | read-only | The one-call summary for an app (name, optional `environment` and `window`): open incidents, the alert rules, the window's traffic figures, the measurement switches, the error groups seen and the slowest and failing operations |
+| `get_app_health` | read-only | The one-call summary for an app (name, optional `environment` and `window`): open incidents (an open Errors incident with the app exception groups behind it), the alert rules, the window's traffic figures, the measurement switches, the error groups seen (platform noise left out) and the slowest and failing operations |
 | `get_traffic` | read-only | An app's request figures (name, optional `environment` and `window`): the series, the current rate, error rate and response times, and the most recent failed requests |
 | `get_analytics` | read-only | Visitors and page views for a `period` (`today`, `7d`, `30d`, `12m`): the series, top pages, sources and devices |
 | `get_browser_vitals` | read-only | The browser measurement switch and, when on, the Core Web Vitals with their ratings, the page-load phases and the slowest resources (name, optional `environment` and `window`) |
-| `list_errors` | read-only | The error groups seen in the window (name, optional `environment` and `window`): title, location, counts, state, fingerprint |
-| `get_error` | read-only | One error group by fingerprint: its trend and its most recent samples with stack traces |
-| `list_traces` | read-only | The newest traces in the window (name, optional `environment`, `window`, operation and failed-only filters) |
-| `get_trace` | read-only | One trace by id: its spans as a tree, with durations, failures, attributes and events |
+| `list_errors` | read-only | The error groups seen in the window (name, optional `environment`, `window`, `include_muted` and `include_noise`): title, kind (app exception, upstream call, platform noise, browser), location, counts, state, fingerprint. Platform noise, the SDK's own cloud-metadata calls, is left out unless `include_noise` is set |
+| `get_error` | read-only | One error group by fingerprint: its kind, its trend and its most recent samples with stack traces and, for a failed request, the operation that caused it |
+| `list_traces` | read-only | The newest traces in the window (name, optional `environment`, `window`, operation and failed-only filters); a failed trace carries its cause and an outbound root is named with its host |
+| `get_trace` | read-only | One trace by id: its spans as a tree (outbound spans named with their host), with durations, failures, attributes and events |
 | `list_incidents` | read-only | An app's recent alert incidents, open ones first, with the alert rules |
+| `detect_source` | read-only | A dry run over source files passed in the call: the detected stack, whether it is a static site and where it publishes from, the suggested release command and services, and whether it is ready to deploy, needs a check, or is blocked and why. Stores nothing |
+| `deploy_source` | makes changes | Deploys an app from source files passed in the call, or from a React artifact passed as one component (see [Deploying from Claude](#deploying-from-claude)). A new name creates the app. Waits briefly for the outcome |
+| `create_source_upload` | makes changes | For Claude Code: returns a one-time upload link and the one command that packs the project folder and sends it, which starts the build |
+| `wait_for_build` | makes changes | Follows one build for up to 45 seconds per call until the build and its release finish: the live address, or the failure reason with the end of the build log. Changes nothing; it is listed as making changes because it waits |
 | `deploy_app` | makes changes | Starts a build of the app's connected repository and tracked branch, or of a Git URL and revision you give; returns the build and how to follow it |
 | `rebuild` | makes changes | Re-runs the app's newest build with the same source |
 | `set_env` | makes changes | Sets one or more variables, optionally as secrets; answers with variable names, never secret values |
@@ -102,19 +106,114 @@ and answer from the production environment unless you name another. Asking for
 traces of a static site is not an error: Claude is told a static site has no
 server-side measurement and is pointed at the browser and error tools. The
 public Nimbus-Land/claude-plugin repository documents the same tools in its
-0.2.0.
+0.3.1.
 
 Activity started from Claude shows in the console and the audit log as you
 "via Claude" (or whichever client you approved), not as anonymous API traffic.
 Refusals use the console's own words: no permission for your role, app
 suspended, subscription past due, build queue full.
 
+## Deploying from Claude
+
+Say "Deploy this to Nimbus Land" and Claude deploys what you are working on.
+How the files get to the platform depends on where they are.
+
+**In a chat (claude.ai, Claude Desktop, mobile).** The app is in the
+conversation, so Claude passes the files in the tool call itself
+(`deploy_source`). It usually checks them first with `detect_source`, which
+says what the platform detected and whether anything stops the deploy, without
+storing anything. Then it follows the build with `wait_for_build` and gives you
+the address.
+
+**In Claude Code.** The app is a folder on your computer, so Claude asks the
+platform for a one-time upload link (`create_source_upload`) and runs one
+command in your project folder. You see the command and approve it once. It
+packs the folder and sends it to Nimbus Land; then Claude follows the build the
+same way. You do not need the `nimbus` CLI and you do not sign in a second
+time: the connector is the only thing you approved.
+
+| | In a chat (`deploy_source`) | In Claude Code (`create_source_upload`) |
+| --- | --- | --- |
+| Size limit | 1 MiB and 500 files | 100 MiB after the exclusions |
+| Where the files travel | Through the conversation | From your computer straight to Nimbus Land |
+| Left out | You choose the files; `node_modules` and `.git` are refused | `.git`, dependency and build-output folders (`node_modules`, `_build`, `deps`, `dist`, `build`, `target`, `.next`, `.nuxt`, virtualenvs, editor folders) and `.env` files |
+
+What to expect either way:
+
+- **A new name creates the app.** A name that is already one of your apps
+  gets a new build. App names are unique across Nimbus Land, so a name
+  someone else holds is refused with a suggested free one.
+- **What deploys.** A server that listens on the `PORT` variable on all
+  interfaces, or a static site (files in a folder with an `index.html`). A
+  `Dockerfile` at the top of the project decides the build when there is one.
+- **Billing.** On a free trial or a plan the deploy just runs. If billing
+  stops it, Claude relays why with the address of your Billing page; once that
+  is sorted, ask it to deploy again.
+- **A failed build** comes back with the reason and the last lines of the
+  build log, and a link to the full log in the console.
+- **Secrets do not go through a deploy.** Variables whose names look like
+  secrets are refused there. Set them afterwards with `set_env` as a secret,
+  or in the console.
+
+**About the upload command.** The link in it works once, for ten minutes, for
+that one app name, and Nimbus Land keeps only a fingerprint of it. It is sent
+in a request header, so it does not appear in web server logs. It does appear
+in your conversation and your shell history; someone who copied it within
+those ten minutes could deploy one build of that one app, recorded under your
+name. A second run of the same command is refused. The command needs a
+POSIX shell (bash or zsh; Git Bash on Windows, which is what Claude Code uses).
+
+**When the `nimbus` CLI is still the right tool:** in CI and other automation,
+for projects over 100 MiB, when the connector is not connected, or when you
+would rather deploy from your own terminal.
+
+### Deploying an artifact
+
+An artifact Claude made in a chat deploys as it is: say "Deploy this to Nimbus Land" under it. A changed artifact is the same sentence again; the same app name gets a new build.
+
+| Artifact | How Claude sends it |
+| --- | --- |
+| HTML | As `index.html` in `files`. It is published unchanged, as a static site |
+| React | The component, unchanged, in `react_component`. Nimbus Land builds a project around it and publishes a static site |
+| SVG, Markdown, Mermaid | Claude first writes an `index.html` that shows it, then deploys that |
+
+**React artifacts.** A React artifact is one component file that leans on libraries Claude's artifact viewer supplies. Nimbus Land builds it with its own tested copies of them: React, Tailwind CSS, the shadcn/ui components under `@/components/ui`, and these packages, which the component may import:
+
+`chart.js`, `class-variance-authority`, `clsx`, `cmdk`, `cn`, `d3`, `date-fns`, `embla-carousel-react`, `input-otp`, `lodash`, `lucide-react`, `mathjs`, `next-themes`, `papaparse`, `radix-ui`, `react`, `react-day-picker`, `react-dom`, `react-resizable-panels`, `recharts`, `sonner`, `tailwind-merge`, `three`, `vaul`
+
+Some things only work inside Claude's artifact viewer. Claude is told before anything is deployed, with what to do instead:
+
+| The artifact uses | What happens | Instead |
+| --- | --- | --- |
+| `window.storage` | Refused | The browser's `localStorage`, which keeps data in each visitor's own browser |
+| `window.claude.complete` (asking Claude from the page) | Refused | Nothing equivalent on a static site. Remove the feature, or build an app with a server that calls the Claude API with its own key |
+| `window.fs` (files attached to the conversation) | Refused | Put the data in the component, or deploy a full project with the data file beside it |
+| A package outside the list above | Refused, naming the package | Rewrite with the listed packages, or deploy a full project in `files` with a `package.json` that declares it |
+| No default export | Refused | The component to show must be the file's default export |
+
+What to expect:
+
+- **It should look like the artifact did.** Small differences in spacing, fonts or theme are possible, because the published page is built with our copies of the libraries, not the viewer's. Ask Claude to adjust the component and deploy again.
+- **The browser tab's title** is the app's name unless Claude passes one.
+- **The project around the component is ours** and cannot be edited through this path. An artifact that needs its own images, data files, extra packages or build settings goes as a full project in `files`: ask Claude to "turn this into a full Vite project and deploy it".
+- **An already published app keeps the libraries it was built with.** It gets our current copies the next time it is deployed.
+
+## Mods in Claude Code
+
+The Nimbus Land plugin for Claude Code also changes what a deploy looks like while it happens. Claude Code calls these changes mods. They appear wherever Claude Code runs with the plugin installed: the terminal, the desktop app's Code tab, the VS Code extension, and the mobile app attached to such a session. A claude.ai chat that only has the connector does not get them.
+
+- **Deploy card.** Under each deploy, rebuild or wait call, a card shows the app's name, whether it is Building, Live or Failed, how long it took, the app's address as a link once it is live, and a link to the build in the console. A failed build shows the reason and the last lines of the build log.
+- **Build follow.** When a deploy call returns before the build has finished, the plugin keeps waiting on that build. The status line shows "building" and the app's name, the card updates, and one notice tells you when the app is live or the build failed, even if the conversation has moved on.
+- **Apps pane.** Type `/nimbus` to open a pane beside the chat that lists the organization's apps: name, status, address, and a mark on any app with an open alert incident. It refreshes when you open it, after each deploy, and once a minute while it is open. It opens only when you ask for it.
+
+What the mods do by themselves: they call two read-only connector tools, `wait_for_build` and `list_apps`, as you, through the connector you signed in to. Following a build stops after ten minutes. They make no other network request, read no files, start no programs and keep nothing after the session ends. Anything that changes an app is still done only by Claude, with your approval.
+
+To turn the mods off, disable the plugin (`/plugin`, then **nimbus-land**) and add the connector alone: `claude mcp add --transport http nimbus https://nimbusland.ca/mcp`.
+
+The mods use an early-access part of Claude Code, so a Claude Code update can stop them from loading. The connector and the skill keep working when that happens.
+
 ## Limits
 
-- **No source uploads.** Deploys from Claude come from the app's connected
-  repository or a Git URL. To deploy files that only exist on your machine,
-  use the CLI (`nimbus deploy`); the plugin's skill teaches Claude Code to do
-  that.
 - **One organization per connection.** To work in another organization,
   connect again and pick it. The organization header the CLI and API accept
   is ignored here.
@@ -127,6 +226,9 @@ suspended, subscription past due, build queue full.
   A custom role gets exactly what it holds.
 - **Rate limits.** Each connection has its own request budget (about two
   requests a second); past it, calls are refused briefly and Claude retries.
+- **Source size.** Files passed in a chat are limited to 1 MiB and 500 files;
+  a one-time upload from Claude Code to 100 MiB. Each organization can start
+  about ten source deploys a minute.
 - **Not covered yet:** databases, volumes, buckets, custom domains, non-production
   environments (other than reading their logs and telemetry), process types, agent tasks and billing. Use the console or the
   CLI for those.
@@ -152,6 +254,13 @@ Claude runs on Anthropic's infrastructure, so everything a tool returns goes to
 Claude as part of the conversation: app names, statuses, addresses, log lines,
 build logs, variable names and plain variable values, command output. Anything
 you type into a tool argument (a variable value, a command) does too.
+
+- **Source you deploy from a chat goes through the conversation.** With
+  `deploy_source` and `detect_source`, every file Claude passes and every
+  build variable is part of the conversation. A one-time upload from Claude
+  Code is different: the files go from your computer to Nimbus Land and are
+  not sent to Anthropic by the upload, though Claude has usually read some of
+  them while working on the project.
 
 - **Secret values are never returned.** `get_env` masks them, and `set_env`
   never echoes them. A value you ask Claude to set as a secret still passes

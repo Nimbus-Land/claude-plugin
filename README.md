@@ -4,7 +4,7 @@ Deploy, inspect and operate your [Nimbus Land](https://nimbusland.ca) apps
 without leaving Claude. Ask "is my app up?", "why did the last build fail?" or
 "deploy main", and Claude answers from your actual apps.
 
-This plugin bundles three things:
+This plugin bundles two things:
 
 - **The Nimbus Land connector** (`.mcp.json`): a remote MCP server at
   `https://nimbusland.ca/mcp`. You sign in with your Nimbus Land account and
@@ -20,17 +20,6 @@ This plugin bundles three things:
   upload that Claude runs as one command, with no CLI to install and no
   second sign-in. Since 0.3.1 a React artifact deploys as it is: Claude
   passes the one component and Nimbus Land builds the project around it.
-- **Mods for Claude Code** (`hooks/`, since 0.4.0): a card under each deploy
-  call that reads Building, Live or Failed with the app's address and a link
-  to the build; a follow that keeps waiting on a build after the call returned
-  and tells you once when the app is live or the build failed; and `/nimbus`,
-  a pane listing your apps with status, address and open alert incidents. By
-  themselves the mods call only the connector's read-only `wait_for_build`
-  and `list_apps` tools; they make no other network request and keep nothing
-  after the session. They appear in Claude Code (terminal, desktop Code tab,
-  VS Code, mobile), not in a claude.ai chat. Built against Claude Code
-  2.1.323; the mods API is early access, so a Claude Code update can stop the
-  mods from loading, and the connector and skill keep working when it does.
 - **The `nimbus-cli` skill** (`skills/nimbus-cli/`): teaches Claude when to
   deploy through the connector and when to use the
   [`nimbus` CLI](https://nimbusland.ca) (no connector, CI, or a project over
@@ -55,6 +44,21 @@ To add only the connector, without the skill:
 ```bash
 claude mcp add --transport http nimbus https://nimbusland.ca/mcp
 ```
+
+## Mods for Claude Code
+
+A second plugin, [`nimbus-land-mods`](https://github.com/nimbus-land/claude-mods),
+adds a card under each deploy call, a follow of a started build and `/nimbus`,
+a pane listing your apps. It is separate because the Claude plugin directory
+does not yet accept mods from us; install it from its own repository:
+
+```bash
+claude plugin marketplace add nimbus-land/claude-mods
+claude plugin install nimbus-land-mods@nimbus-land-mods
+```
+
+It uses the connector you are already signed in to, from this plugin or from
+the Claude directory.
 
 ## Install in Claude Desktop and claude.ai
 

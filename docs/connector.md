@@ -200,17 +200,26 @@ What to expect:
 
 ## Mods in Claude Code
 
-The Nimbus Land plugin for Claude Code also changes what a deploy looks like while it happens. Claude Code calls these changes mods. They appear wherever Claude Code runs with the plugin installed: the terminal, the desktop app's Code tab, the VS Code extension, and the mobile app attached to such a session. A claude.ai chat that only has the connector does not get them.
+Nimbus Land's second plugin for Claude Code, `nimbus-land-mods`, changes what a deploy looks like while it happens. Claude Code calls these changes mods. They appear wherever Claude Code runs with that plugin installed: the terminal, the desktop app's Code tab, the VS Code extension, and the mobile app attached to such a session. A claude.ai chat that only has the connector does not get them.
+
+The mods plugin is installed from its own repository, not from the Claude plugin directory, which does not yet accept mods from us:
+
+```bash
+claude plugin marketplace add nimbus-land/claude-mods
+claude plugin install nimbus-land-mods@nimbus-land-mods
+```
+
+It uses the Nimbus Land connector you are already signed in to, whether that came from the Claude directory, from the `nimbus-land` plugin or from `claude mcp add`.
 
 - **Deploy card.** Under each deploy, rebuild or wait call, a card shows the app's name, whether it is Building, Live or Failed, how long it took, the app's address as a link once it is live, and a link to the build in the console. A failed build shows the reason and the last lines of the build log.
-- **Build follow.** When a deploy call returns before the build has finished, the plugin keeps waiting on that build. The status line shows "building" and the app's name, the card updates, and one notice tells you when the app is live or the build failed, even if the conversation has moved on.
+- **Build follow.** When a deploy call returns before the build has finished, the mods keep waiting on that build. The status line shows "building" and the app's name, the card updates, and one notice tells you when the app is live or the build failed, even if the conversation has moved on.
 - **Apps pane.** Type `/nimbus` to open a pane beside the chat that lists the organization's apps: name, status, address, and a mark on any app with an open alert incident. It refreshes when you open it, after each deploy, and once a minute while it is open. It opens only when you ask for it.
 
 What the mods do by themselves: they call two read-only connector tools, `wait_for_build` and `list_apps`, as you, through the connector you signed in to. Following a build stops after ten minutes. They make no other network request, read no files, start no programs and keep nothing after the session ends. Anything that changes an app is still done only by Claude, with your approval.
 
-To turn the mods off, disable the plugin (`/plugin`, then **nimbus-land**) and add the connector alone: `claude mcp add --transport http nimbus https://nimbusland.ca/mcp`.
+To turn the mods off, disable or uninstall that plugin (`/plugin`, then **nimbus-land-mods**). The connector and the `nimbus-land` plugin are not affected.
 
-The mods use an early-access part of Claude Code, so a Claude Code update can stop them from loading. The connector and the skill keep working when that happens.
+The mods use an early-access part of Claude Code, so a Claude Code update can stop them from loading. The connector and the `nimbus-land` plugin keep working when that happens.
 
 ## Limits
 

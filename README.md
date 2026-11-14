@@ -58,15 +58,16 @@ claude mcp add --transport http nimbus https://nimbusland.ca/mcp
 
 ## Install in Claude Desktop and claude.ai
 
-Until Nimbus Land is listed in the Claude directory, add it as a custom
-connector:
+Nimbus Land is listed in the Claude directory: open **Settings → Connectors**,
+find Nimbus Land in the directory, select **Connect** and sign in to Nimbus
+Land in the window that opens.
+
+To add it by its address instead:
 
 1. Open **Settings → Connectors → Add custom connector**.
 2. Name it `Nimbus Land` and enter the URL `https://nimbusland.ca/mcp`. Leave
    the OAuth client fields empty.
 3. Select **Connect** and sign in to Nimbus Land in the window that opens.
-
-Once the connector is listed in the directory, install it from there instead.
 
 ## What the consent screen asks
 

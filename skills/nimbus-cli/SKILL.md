@@ -18,7 +18,8 @@ Check whether the Nimbus Land connector's tools are available (`list_apps`,
 `list_errors`, `get_error`, `list_traces`, `get_trace`, `list_incidents`; and
 since 0.3.0 `detect_source`, `deploy_source`, `create_source_upload`,
 `wait_for_build`; since 0.3.1 the first two take a React artifact as
-`react_component`).
+`react_component`; since 0.4.2 `add_volume`, `add_sqlite_database`, and a `volume` argument on
+`deploy_source` and `create_source_upload`).
 
 - **Connector connected:** use its tools for status, logs, builds, environment
   variables, health, errors, traces, traffic and visitors, deploys, rebuilds
@@ -30,7 +31,60 @@ since 0.3.0 `detect_source`, `deploy_source`, `create_source_upload`,
 
 ### Deploying ("deploy this to Nimbus Land")
 
-Pick the first case that fits:
+**First: data the app must keep.** An app's own disk is not kept. Every deploy
+and every restart starts from a fresh copy, so a SQLite file, uploads or
+anything else the app writes to disk is lost unless it is on a volume. Before
+deploying, check whether the app writes such data:
+
+1. Read the code for where it writes: the SQLite file's path, an uploads
+   directory, a `DATA_DIR`-style variable. `detect_source` also reports a
+   suggested volume, or says it found SQLite and could not tell where the file
+   lives. Python's built-in `sqlite3` is not detected, so do not rely on
+   detection alone.
+2. If it does, tell the user plainly: the data needs a volume at that
+   directory (1 GB unless they need more), and what it costs a month.
+   `detect_source` gives the volume's price and the estimated monthly cost of
+   the whole app. Ask whether to add it. A volume costs money, so never add
+   one without a yes.
+3. On yes, pass `volume` (`{"mount_path": "/data", "size_gb": 1}`, the
+   directory as the app sees it) to `deploy_source` or `create_source_upload`.
+   Make sure the app writes there: an absolute path, or a variable set to it.
+   Keep an app that writes a SQLite file at one instance.
+4. On no, deploy without it and repeat the deploy answer's one-sentence note:
+   the data will be lost on the next deploy or restart.
+
+If the deploy tools list no `volume` argument, the connector is older than
+this skill: say so, and point the user at **Storage** in the console to add a
+volume and attach it to the app. If a volume request is refused because the
+connection lacks storage access, relay the sentence: the user reconnects
+Nimbus Land in Claude, which adds it.
+
+**An app that is already deployed and loses its data.** Call `get_app`: it
+lists the app's volumes and its SQLite database, or says it has none. Warn
+before either fix: the app restarts, and files already on the app's own disk
+are not copied into the volume, so what it saved before is gone and what it
+saves from then on is kept. Give the price and ask first.
+
+- **The data is a SQLite file:** find the path of the file the app opens and
+  call `add_sqlite_database` with the app's name and that path as `db_path`
+  (leave `db_path` out if the app reads `SQLITE_DB_PATH` or `DATABASE_URL`).
+  The file is kept on a volume and backed up continuously, and the app stays
+  at one instance. The file must be directly in `/data`, or on a volume the
+  app already has; if the tool says there is no volume at the file's
+  directory, call `add_volume` for that directory, then the tool again.
+- **Anything else (uploads, generated files):** call `add_volume` with the
+  app's name and the directory.
+
+**A SQLite app deployed with a `volume`:** once it is live, offer
+`add_sqlite_database` with the file's path too. It uses the volume the app
+has, costs nothing more, and adds the backups.
+
+**After a deploy, say what it costs.** A live answer (`deploy_source`,
+`wait_for_build`) and `get_app` carry the app's estimated monthly cost. Give
+it to the user with the address. Leave it out when the answer has none (a
+static site, or no price available); never make up a figure.
+
+Then pick the first case that fits:
 
 1. **Connector connected, and the thing to deploy is one React component
    with no project around it** (a Claude artifact, or a lone `.jsx`/`.tsx`
@@ -75,7 +129,8 @@ address it carries, and deploy again when the user says it is sorted.
 all interfaces (`0.0.0.0`), not a fixed port or `localhost`. A static site is
 files in a publish directory with an `index.html`. A `Dockerfile` at the root
 decides the build when there is one. Write the app to this contract before
-deploying.
+deploying. Files the app writes to its own disk are lost on every deploy and
+restart; data to keep goes on a volume (above).
 
 **Variables.** Pass only non-secret build variables in a deploy. Anything
 secret goes through `set_env` with `secret: true` after the first deploy, or
@@ -171,6 +226,19 @@ relevant log lines, and suggest a fix. The wait times out after 10 minutes and
 points at `nimbus status`, which does not mean it failed. On
 `build_queue_full`, retry shortly. To redeploy without new source:
 `nimbus rebuild [app]`.
+
+`nimbus deploy` creates no storage. For data the app must keep (see "data the
+app must keep" above), create a volume and attach it after the first deploy:
+
+```bash
+nimbus volumes create --name my-app-data --size 1            # size in GB; prints the volume id
+nimbus volumes attach --volume <volume-id> --app <app-id> --path /data
+nimbus volumes list
+```
+
+Attaching restarts the app, and files already at that path on the app's own
+disk are not copied in. A volume costs money each month: tell the user and ask
+first.
 
 ## Status, builds and logs
 

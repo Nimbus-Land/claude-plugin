@@ -51,13 +51,18 @@ shows:
   - *See your apps, builds, logs and variable names*
   - *Deploy and rebuild apps*
   - *Change variables and run commands*
+  - *Create storage for your apps*
 - **A warning for Claude Code.** When the only place the sign-in can return to
   is `localhost`, the page says the result goes to a program on your own
   computer. Only approve it if you just started that sign-in yourself.
 
 **Approve** sends Claude back with a one-time code; **Deny** sends it back with
 nothing. Approving the same client for the same organization again reuses your
-existing grant rather than creating a second one. Approvals are recorded in the
+existing grant rather than creating a second one, widened to include anything
+newly requested. A connection approved before volumes could be added lacks
+storage access: **Account settings → Connected apps** says so, and reconnecting
+it from Claude adds it. Until then, asking for a volume is refused with that
+advice and everything else works as before. Approvals are recorded in the
 organization's audit log.
 
 Granting access never widens what you can do: every tool call is checked
@@ -73,7 +78,7 @@ such, so Claude asks you before calling them.
 | Tool | | What it does |
 | --- | --- | --- |
 | `list_apps` | read-only | Every app in the organization: status, address, stack, last deploy, open alert incidents |
-| `get_app` | read-only | One app: status, address, live release, instances, connected repository and branch, custom domain, recent builds, console link |
+| `get_app` | read-only | One app: status, address, live release, instances, connected repository and branch, custom domain, volumes, estimated monthly cost, recent builds, console link |
 | `get_app_logs` | read-only | Recent runtime log lines (at most 200), optionally for one instance (named as the console labels them, e.g. `web-7d9f8`), with a console link for more |
 | `list_builds` | read-only | An app's builds: status, source, times, failure reason |
 | `get_build` | read-only | One build: status, source, started and finished, failure reason, console link |
@@ -88,13 +93,15 @@ such, so Claude asks you before calling them.
 | `list_traces` | read-only | The newest traces in the window (name, optional `environment`, `window`, operation and failed-only filters); a failed trace carries its cause and an outbound root is named with its host |
 | `get_trace` | read-only | One trace by id: its spans as a tree (outbound spans named with their host), with durations, failures, attributes and events |
 | `list_incidents` | read-only | An app's recent alert incidents, open ones first, with the alert rules |
-| `detect_source` | read-only | A dry run over source files passed in the call: the detected stack, whether it is a static site and where it publishes from, the suggested release command and services, and whether it is ready to deploy, needs a check, or is blocked and why. Stores nothing |
-| `deploy_source` | makes changes | Deploys an app from source files passed in the call, or from a React artifact passed as one component (see [Deploying from Claude](#deploying-from-claude)). A new name creates the app. Waits briefly for the outcome |
-| `create_source_upload` | makes changes | For Claude Code: returns a one-time upload link and the one command that packs the project folder and sends it, which starts the build |
-| `wait_for_build` | makes changes | Follows one build for up to 45 seconds per call until the build and its release finish: the live address, or the failure reason with the end of the build log. Changes nothing; it is listed as making changes because it waits |
+| `detect_source` | read-only | A dry run over source files passed in the call: the detected stack, whether it is a static site and where it publishes from, the suggested release command and services, the volume the app needs to keep its data (folder, size, monthly price), the estimated monthly cost, and whether it is ready to deploy, needs a check, or is blocked and why. Stores nothing |
+| `deploy_source` | makes changes | Deploys an app from source files passed in the call, or from a React artifact passed as one component (see [Deploying from Claude](#deploying-from-claude)). A new name creates the app. With `volume`, creates a volume and mounts it before the app first starts. Waits briefly for the outcome; a live answer gives the estimated monthly cost |
+| `create_source_upload` | makes changes | For Claude Code: returns a one-time upload link and the one command that packs the project folder and sends it, which starts the build. Takes `volume` as `deploy_source` does |
+| `wait_for_build` | makes changes | Follows one build for up to 45 seconds per call until the build and its release finish: the live address with the app's estimated monthly cost, or the failure reason with the end of the build log. Changes nothing; it is listed as making changes because it waits |
 | `deploy_app` | makes changes | Starts a build of the app's connected repository and tracked branch, or of a Git URL and revision you give; returns the build and how to follow it |
 | `rebuild` | makes changes | Re-runs the app's newest build with the same source |
 | `set_env` | makes changes | Sets one or more variables, optionally as secrets; answers with variable names, never secret values |
+| `add_volume` | makes changes | Gives a deployed app a volume at a folder, so what the app saves there is kept. The app restarts; files already in that folder on the app's own disk are not copied. Answers with the volume, its monthly price and the app's estimated monthly cost |
+| `add_sqlite_database` | makes changes | Gives a deployed app a SQLite database that is kept and backed up: the file lives on a volume, is copied continuously to backup storage, and the app stays at one instance. Use it, not `add_volume`, when the app's data is a SQLite file. |
 | `run_command` | makes changes | Starts a one-off command on the app; returns its output if it finishes within about 10 seconds, otherwise the run id |
 
 Apps are named the way the console names them. An app outside the connected
@@ -167,6 +174,20 @@ POSIX shell (bash or zsh; Git Bash on Windows, which is what Claude Code uses).
 for projects over 100 MiB, when the connector is not connected, or when you
 would rather deploy from your own terminal.
 
+### Data your app keeps
+
+An app's own disk is not kept. Every deploy and every restart starts the app from a fresh copy, so a SQLite database, uploaded files or anything else the app saved to its disk is gone. Data to keep goes on a **volume**: storage mounted at a folder inside the app, which stays through deploys and restarts.
+
+- **Before a deploy.** `detect_source` tells Claude when the app needs one: a suggested volume with its folder, size and monthly price, or, when it finds SQLite and cannot tell where the file lives, a request to find the folder in the code. Claude tells you the price and asks. If you agree it passes `volume` (a folder such as `/data`, and a size in GB, 1 by default) to `deploy_source` or `create_source_upload`, and the volume is there when the app first starts.
+- **Nothing is added without your yes.** A deploy without `volume` creates no storage. If the app looks like it saves data, the deploy's answer says the data will not be kept and how to fix it.
+- **An app that is already deployed.** `add_volume` gives it a volume at a folder, for uploads and other files. The app restarts, and files that were in that folder on the app's own disk are **not** copied into the volume: what the app saved before is gone, and what it saves from then on is kept. `get_app` lists an app's volumes, or says it has none.
+- **An app whose data is a SQLite file.** `add_sqlite_database` gives a deployed app the same SQLite database the console's **Add database** does. Claude passes the path of the file the app opens (`/data/app.db` by default). The file is kept on a volume (one is created at `/data`, or a volume the app already has is used), it is copied continuously to backup storage so it can be restored to a point in time from the app's page, the app gets `DATABASE_URL` and `SQLITE_DB_PATH`, and the app is kept at one instance. The app restarts, and a database file that was on the app's own disk is **not** copied: the app starts with an empty database. One per app. Creating the volume needs storage access; using a volume the app has does not.
+- **The connection needs storage access.** *Create storage for your apps* is one of the lines on the approval page. A connection approved before it existed gets a sentence telling you to reconnect; everything else keeps working.
+- **Deploying the same app again** with the same folder keeps the volume it has.
+- **Not for static sites.** A static site has no disk to mount a volume on.
+
+**What it costs.** `detect_source` gives an estimated monthly cost before anything is deployed: the instance at the recommended size plus any suggested volume, with the total. Once the app is live, the deploy's answer, `wait_for_build`, `get_app`, `add_volume` and `add_sqlite_database` give the app's estimated monthly cost at your organization's prices, the same figure the app's page shows. During a free trial the answer says the trial covers it for now. A static site has no instance price.
+
 ### Deploying an artifact
 
 An artifact Claude made in a chat deploys as it is: say "Deploy this to Nimbus Land" under it. A changed artifact is the same sentence again; the same app name gets a new build.
@@ -238,7 +259,7 @@ The mods use an early-access part of Claude Code, so a Claude Code update can st
 - **Source size.** Files passed in a chat are limited to 1 MiB and 500 files;
   a one-time upload from Claude Code to 100 MiB. Each organization can start
   about ten source deploys a minute.
-- **Not covered yet:** databases, volumes, buckets, custom domains, non-production
+- **Not covered yet:** creating databases, resizing or removing volumes, buckets, custom domains, non-production
   environments (other than reading their logs and telemetry), process types, agent tasks and billing. Use the console or the
   CLI for those.
 

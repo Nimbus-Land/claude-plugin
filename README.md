@@ -77,11 +77,13 @@ To add it by its address instead:
 
 Nimbus Land shows which client is asking (for example "Claude") and where it
 will send you back, then asks you to pick **one organization** (your current
-one is preselected) and approve three kinds of access:
+one is preselected) and approve these kinds of access:
 
 - **See your apps, builds, logs and variable names**
 - **Deploy and rebuild apps**
 - **Change variables and run commands**
+- **Create storage for your apps** (since 0.4.2: a volume, so an app's data
+  survives deploys and restarts; Claude gives the price and asks first)
 
 Claude can never do more than your role in that organization allows. When the
 request comes from Claude Code, the page warns that the sign-in returns to a
@@ -98,6 +100,12 @@ admins can also see and revoke members' grants under **Organization settings**.
 
 - Deploys from Claude come from the app's connected Git repository or a Git URL
   you give it. The connector never accepts uploaded source; use the CLI for that.
+- An app's own disk is not kept across deploys and restarts. Since 0.4.2
+  Claude checks whether your app saves data (a SQLite file, uploads), tells
+  you what a volume costs and adds one if you agree, and reports the app's
+  estimated monthly cost after a deploy. For an app that keeps a SQLite file
+  it can add the platform's SQLite database, which also backs the file up
+  continuously.
 - Log results are capped at 200 lines, with a link to the console for more.
 - Secret values are never returned. Tool arguments and results (app names,
   statuses, log lines, variable names, build logs) are sent to Claude, so use

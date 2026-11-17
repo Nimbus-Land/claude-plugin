@@ -1,49 +1,67 @@
 # Nimbus Land for Claude
 
-Deploy, inspect and operate your [Nimbus Land](https://nimbusland.ca) apps
-without leaving Claude. Ask "is my app up?", "why did the last build fail?" or
-"deploy main", and Claude answers from your actual apps.
+Put what you build with Claude on the web, hosted in Canada. Connect
+[Nimbus Land](https://nimbusland.ca) once, then say:
 
-This plugin bundles two things:
+> **Deploy this to Nimbus Land**
 
-- **The Nimbus Land connector** (`.mcp.json`): a remote MCP server at
-  `https://nimbusland.ca/mcp`. You sign in with your Nimbus Land account and
-  choose which organization Claude may act in. It lets Claude list apps, read
-  status, runtime logs, builds and build logs, read environment variables
-  (secret values masked), deploy from an app's connected repository, rebuild,
-  set variables and run one-off commands. Since 0.2.0 it also reads an app's
-  health: open incidents and alert rules, request figures, visitors, browser
-  vitals, error groups with their stack traces, traces and operations, so
-  "why is my app slow?" and "what is this error?" get answered from the
-  app's own telemetry. Since 0.3.0 it also deploys: a small app straight
-  from the conversation, or the project on your disk through a one-time
-  upload that Claude runs as one command, with no CLI to install and no
-  second sign-in. Since 0.3.1 a React artifact deploys as it is: Claude
-  passes the one component and Nimbus Land builds the project around it.
-- **The `nimbus-cli` skill** (`skills/nimbus-cli/`): teaches Claude when to
-  deploy through the connector and when to use the
-  [`nimbus` CLI](https://nimbusland.ca) (no connector, CI, or a project over
-  100 MiB), what a deployable app looks like, and never to print or store your
-  credentials.
+Claude works out what your app is built with, builds it and answers with its
+address. After that, "is my app up?", "why did the last build fail?" and "add
+a title and redeploy" are answered from your actual apps, in the same
+conversation.
 
-## Install in Claude Code
+## Install
 
-Add this repository as a plugin marketplace, then install the plugin from it:
+Pick the block for where you use Claude. One sign-in to Nimbus Land serves all
+of them, and you can create your account in the same window.
 
-```bash
+**In Claude Code.** Install the Nimbus Land plugin: the connector plus a skill that teaches Claude how to deploy your project.
+
+```sh
 claude plugin marketplace add nimbus-land/claude-plugin
 claude plugin install nimbus-land@nimbus-land
 ```
 
-Restart Claude Code. The first time Claude uses a Nimbus Land tool, run `/mcp`
-and choose **nimbus** to sign in: your browser opens the Nimbus Land consent
-page, and Claude Code receives the result on a `localhost` callback.
+1. Restart Claude Code.
+2. Run `/mcp`, choose **nimbus**, and sign in to Nimbus Land or create an account in the browser window that opens.
+3. In your project, say: **Deploy this to Nimbus Land**.
 
-To add only the connector, without the skill:
+**On claude.ai and in Claude Desktop.** Connect Nimbus Land from Claude's settings:
 
-```bash
+1. Open **Settings → Connectors** and find **Nimbus Land** in the directory.
+2. Choose **Connect**, and sign in to Nimbus Land or create an account in the window that opens.
+3. Under what you built, say: **Deploy this to Nimbus Land**.
+
+One connection made this way also serves Claude on mobile.
+
+**If Nimbus Land is not in your directory**, add the same connector by its address: **Settings → Connectors → Add custom connector**, name it `Nimbus Land`, enter `https://nimbusland.ca/mcp`, leave the OAuth client fields empty, and choose **Connect**.
+
+**The connector only, without the skill** (Claude Code):
+
+```sh
 claude mcp add --transport http nimbus https://nimbusland.ca/mcp
 ```
+
+Then run `/mcp` and choose **nimbus** to sign in.
+
+## What is in this plugin
+
+- **The Nimbus Land connector** (`.mcp.json`): a remote MCP server at
+  `https://nimbusland.ca/mcp`. You sign in with your Nimbus Land account and
+  choose which organization Claude may act in. It deploys a small app
+  straight from the conversation, a React artifact as it is, or the project
+  on your disk through a one-time upload that Claude runs as one command,
+  with no CLI to install and no second sign-in. It also lets Claude list
+  apps, read status, runtime logs, builds and build logs, read environment
+  variables (secret values masked), rebuild, set variables, run one-off
+  commands, and read an app's health: open incidents, request figures,
+  visitors, browser vitals, error groups with their stack traces and traces.
+- **The `nimbus-cli` skill** (`skills/nimbus-cli/`): teaches Claude to deploy
+  through the connector, to ask you to sign in with `/mcp` when you have not
+  yet, and when the [`nimbus` CLI](https://nimbusland.ca) is the right tool
+  instead (CI, a project over 100 MiB, or when you ask for it). It also
+  covers what a deployable app looks like, and never printing or storing
+  your credentials.
 
 ## Mods for Claude Code
 
@@ -60,30 +78,22 @@ claude plugin install nimbus-land-mods@nimbus-land-mods
 It uses the connector you are already signed in to, from this plugin or from
 the Claude directory.
 
-## Install in Claude Desktop and claude.ai
-
-Nimbus Land is listed in the Claude directory: open **Settings → Connectors**,
-find Nimbus Land in the directory, select **Connect** and sign in to Nimbus
-Land in the window that opens.
-
-To add it by its address instead:
-
-1. Open **Settings → Connectors → Add custom connector**.
-2. Name it `Nimbus Land` and enter the URL `https://nimbusland.ca/mcp`. Leave
-   the OAuth client fields empty.
-3. Select **Connect** and sign in to Nimbus Land in the window that opens.
-
 ## What the consent screen asks
 
 Nimbus Land shows which client is asking (for example "Claude") and where it
-will send you back, then asks you to pick **one organization** (your current
-one is preselected) and approve these kinds of access:
+will send you back, then names the organization Claude will act in (you pick
+one if you belong to several) and asks you to approve these kinds of access:
 
 - **See your apps, builds, logs and variable names**
 - **Deploy and rebuild apps**
-- **Change variables and run commands**
-- **Create storage for your apps** (since 0.4.2: a volume, so an app's data
-  survives deploys and restarts; Claude gives the price and asks first)
+- **Change environment variables and run one-off commands**
+- **See your managed databases and their status**
+- **Run read-only queries against your managed databases**
+- **Create storage for your apps** (a volume, so an app's data survives
+  deploys and restarts; Claude gives the price and asks first)
+
+If your organization is in its free trial, the page says the trial covers the
+deploy and that no card is needed.
 
 Claude can never do more than your role in that organization allows. When the
 request comes from Claude Code, the page warns that the sign-in returns to a
@@ -98,8 +108,12 @@ admins can also see and revoke members' grants under **Organization settings**.
 
 ## Good to know
 
-- Deploys from Claude come from the app's connected Git repository or a Git URL
-  you give it. The connector never accepts uploaded source; use the CLI for that.
+- "Deploy this to Nimbus Land" takes up to 500 files and 1 MiB from a chat,
+  and up to 100 MiB from a project folder in Claude Code. An app that already
+  builds from a Git repository can keep deploying from it.
+- New here? A new account starts with a free trial, no card needed. If you
+  signed up with an email and a password, confirm your address first: until
+  then Claude tells you to open the link we emailed you, then to ask again.
 - An app's own disk is not kept across deploys and restarts. Since 0.4.2
   Claude checks whether your app saves data (a SQLite file, uploads), tells
   you what a volume costs and adds one if you agree, and reports the app's

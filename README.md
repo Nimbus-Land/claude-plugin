@@ -57,8 +57,8 @@ Then run `/mcp` and choose **nimbus** to sign in.
   commands, and read an app's health: open incidents, request figures,
   visitors, browser vitals, error groups with their stack traces and traces.
 - **The `nimbus-cli` skill** (`skills/nimbus-cli/`): teaches Claude to deploy
-  through the connector, to ask you to sign in with `/mcp` when you have not
-  yet, and when the [`nimbus` CLI](https://nimbusland.ca) is the right tool
+  through the connector, to ask you to sign in when you have not yet (`/mcp`
+  in Claude Code, **Connect** in a chat), and when the [`nimbus` CLI](https://nimbusland.ca) is the right tool
   instead (CI, a project over 100 MiB, or when you ask for it). It also
   covers what a deployable app looks like, and never printing or storing
   your credentials.

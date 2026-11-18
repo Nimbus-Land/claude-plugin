@@ -92,7 +92,7 @@ Read-only tools never change anything. Tools that make changes are marked as suc
 | `deploy_app` | makes changes | Builds the app's connected repository and branch, or a Git URL and revision you give |
 | `connect_repo` | makes changes | Connects a deployed app to a GitHub repository and branch your organization's GitHub App can reach, optionally turning deploy on push on. Deploys nothing by itself |
 | `rebuild` | makes changes | Re-runs the app's newest build with the same source |
-| `set_env` | makes changes | Sets one or more variables, optionally as secrets; never echoes secret values |
+| `set_env` | makes changes | Sets one or more variables, optionally as secrets; a variable that looks like a credential is stored as a secret unless `plain: true` is passed; never echoes secret values |
 | `add_volume` | makes changes | Gives a deployed app a volume at a folder, so what the app saves there is kept. The app restarts; files already in that folder on the app's own disk are not copied. Answers with the volume, its monthly price and the app's estimated monthly cost |
 | `add_sqlite_database` | makes changes | Gives a deployed app a SQLite database that is kept and backed up: the file lives on a volume, is copied continuously to backup storage, and the app stays at one instance. Use it, not `add_volume`, when the app's data is a SQLite file. |
 | `run_command` | makes changes | Starts a one-off command; returns its output if it finishes within about 10 seconds, otherwise the run id |

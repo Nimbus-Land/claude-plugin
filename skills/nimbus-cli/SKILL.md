@@ -1,6 +1,6 @@
 ---
 name: nimbus-cli
-description: Use when the user wants to deploy, check, debug or configure an app hosted on Nimbus Land (nimbusland.ca), says "deploy this to Nimbus Land", or mentions the `nimbus` CLI, `.nimbus.yml`, a Nimbus build, Nimbus logs or Nimbus environment variables. Covers deploying a project from disk or from the conversation through the Nimbus Land connector, what to do when the connector is installed but not signed in yet (the user runs `/mcp`), reading status, builds, logs, errors, traces, traffic and visitors, managing environment variables, and when the `nimbus` CLI is the right tool instead.
+description: Use when the user says "deploy this to Nimbus Land", or wants to deploy, check, debug or configure an app hosted on Nimbus Land (nimbusland.ca). Deploys what is in the conversation (an artifact, an HTML page, a few files) or a project on disk through the Nimbus Land connector, with no CLI and no Git repository needed. Covers what to do when the connector is added but not connected yet (in a chat the user selects Connect on the Nimbus Land connector; in Claude Code they run `/mcp`), reading status, builds, logs, errors, traces, traffic and visitors, managing environment variables, and the `nimbus` CLI and `.nimbus.yml` for when the user asks for the CLI or for CI.
 ---
 
 # Nimbus Land and the `nimbus` CLI
@@ -19,7 +19,7 @@ Check whether the Nimbus Land connector's tools are available (`list_apps`,
 since 0.3.0 `detect_source`, `deploy_source`, `create_source_upload`,
 `wait_for_build`; since 0.3.1 the first two take a React artifact as
 `react_component`; since 0.4.2 `add_volume`, `add_sqlite_database`, and a `volume` argument on
-`deploy_source` and `create_source_upload`). Then you are in one of three
+`deploy_source` and `create_source_upload`). Then you are in one of four
 states:
 
 1. **The tools are available.** Use them for status, logs, builds,
@@ -39,7 +39,20 @@ states:
    signed in, check for the tools again and carry on from state 1. If the
    tools are still missing, ask them to restart Claude Code and run `/mcp`
    once more.
-3. **The CLI.** Only when the user asks for the `nimbus` CLI, in CI or other
+3. **The tools are not available, and this is a chat (claude.ai, Claude
+   Desktop, mobile).** The Nimbus Land connector is added but not connected,
+   or not switched on for this conversation. Tell the user, in these words or
+   close to them: "Select **Connect** on the Nimbus Land connector (on its
+   card in this chat, or under Connectors in settings) and sign in to Nimbus
+   Land in the window that opens. If you have no account, create one there: a
+   new account starts with a free trial, no card needed. Then say 'Deploy this
+   to Nimbus Land' again." Then stop and wait. Do NOT suggest the `nimbus`
+   CLI, a Git repository, downloading the file or another host: once
+   connected, you deploy what is in the conversation yourself, an artifact
+   included. If the tools are still missing after the user says they are
+   connected, ask them to check that Nimbus Land is switched on in this
+   conversation's connector list, or to start a new conversation.
+4. **The CLI.** Only when the user asks for the `nimbus` CLI, in CI or other
    automation, or for a project over 100 MiB (the connector's upload limit).
    Never because the connector is not signed in.
 
@@ -137,8 +150,9 @@ Then pick the first case that fits:
 4. **The app already builds from a Git repository:** `deploy_app`.
 5. **The user asked for the CLI, CI or other automation, or a project over
    100 MiB:** the CLI (`nimbus deploy`, below). If none of the cases above
-   fits because the connector's tools are missing, that is state 2 of Rule 1:
-   have the user sign in with `/mcp`; do not reach for the CLI.
+   fits because the connector's tools are missing, that is state 2 or 3 of
+   Rule 1: have the user sign in (`/mcp` in Claude Code, **Connect** in a
+   chat); do not reach for the CLI.
 
 A name that is not yet one of the organization's apps creates the app; confirm
 the name with the user first. If the name is taken, offer the one the refusal
@@ -172,7 +186,7 @@ the user sets it in the console (see Rule 2).
 
 ## Install and check
 
-This section and the CLI sections below apply only in state 3 of Rule 1: the
+This section and the CLI sections below apply only in state 4 of Rule 1: the
 user asked for the CLI, automation, or a project over 100 MiB.
 
 ```bash

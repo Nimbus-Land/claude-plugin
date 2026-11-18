@@ -1,6 +1,6 @@
 {
   "name": "nimbus-land",
-  "description": "The Nimbus Land plugin for Claude Code: the Nimbus Land connector and the nimbus CLI skill.",
+  "description": "The Nimbus Land plugin for Claude Code: the Nimbus Land connector and the skill that tells Claude how to deploy with it.",
   "owner": {
     "name": "Nimbus Land",
     "email": "support@nimbusland.ca"
@@ -9,8 +9,8 @@
     {
       "name": "nimbus-land",
       "source": "./",
-      "description": "Deploy, inspect and operate your Nimbus Land apps from Claude: the Nimbus Land connector plus a skill for the nimbus CLI.",
-      "version": "0.4.3"
+      "description": "Say \"Deploy this to Nimbus Land\" and Claude puts your artifact, page or project online, then checks, debugs and configures it: the Nimbus Land connector plus a skill that tells Claude how to use it.",
+      "version": "0.4.4"
     }
   ]
 }
